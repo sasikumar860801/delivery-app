@@ -1,0 +1,183 @@
+Here is a clean, structured breakdown of your app requirements in a mind-map-like hierarchy (text version).
+I've organized it app-wise (Customer App → Delivery Partner App → Vendor App → Admin App), based on the flowchart text you provided.
+I focused only on the visible flows/screens/actions from your diagram — no assumptions added.
+1. Customer App Flowchart (CustomerAppFlowchart)
+
+Splash / App Launch
+Loading animation
+Check if already logged in → auto redirect
+
+Onboarding / Login Flow
+Splash Screen
+Login / Signup Screen
+Enter Mobile Number → Request OTP
+Enter OTP → Verify
+(Alternative) Enter Name + Mobile → Create Account
+
+Error handling (wrong OTP, network, etc.)
+Show Terms & Privacy Policy link
+
+Home Screen (after login)
+Categories browsing
+Search / Recent / Popular items
+Banner / Offers carousel (implied)
+
+Product Browsing Flow
+Select Category → Vendor list / Product list
+Product Detail Screen
+View details, images, price
+Add to Cart (select quantity)
+
+
+Cart Screen
+View added items
+Update quantity / Remove item
+Apply coupon (if exists)
+View total / taxes / delivery charge
+
+Checkout / Address & Payment
+Address Selection / Add New Address
+Payment Method Selection
+Place Order → Payment Gateway / Cash on Delivery
+
+Order Tracking Screen
+Order Summary (items, total, status)
+Real-time tracking (partner assigned → picked up → en route → delivered)
+Estimated time
+Cancel order (before certain status)
+
+Order History / Past Orders
+List of previous orders
+View order details
+Reorder option
+
+Profile & Settings
+My Profile (name, mobile, email)
+Manage Addresses
+Wallet / Payment methods
+Support / Contact Us
+Logout
+
+
+2. Delivery Partner App (Driver / Delivery Partner App)
+
+Splash / App Launch
+Loading → Check login status
+
+Login / Registration Flow
+Enter Mobile Number → Request OTP
+Enter OTP → Login
+(First time) Complete profile + Upload documents
+Wait for Admin approval
+
+Main Dashboard (after approval & online)
+Online / Offline toggle
+Earnings summary
+Recent / Today's orders count
+
+New Order Alert / Incoming Order
+Notification → Accept / Reject
+View order details (customer address, items, total distance)
+
+Pickup Process
+Navigate to Vendor/Store
+Mark as "Arrived at Store"
+Confirm pickup (OTP from vendor or photo proof?)
+
+Delivery Process
+Navigate to Customer location
+Mark as "Out for Delivery"
+Arrived at Customer → Deliver (OTP / Signature / Photo proof)
+Collect payment (if COD)
+Mark Delivered → Earnings update
+
+Order History
+View past deliveries
+Earnings breakdown
+
+Profile & Support
+View profile & documents
+Contact support
+View commission / payout settings
+
+
+3. Vendor App (Restaurant / Store App)
+
+Splash / App Launch
+Login Flow
+Enter Mobile / Email + OTP / Password
+(First time) Create vendor account (admin approval needed?)
+
+Dashboard
+Today's orders count
+Revenue summary
+New orders pending
+
+Order Management
+View incoming orders
+Accept / Reject order
+Update status:
+Accepted → Preparing
+Ready for Pickup
+
+View order items & customer details
+
+Menu / Product Management
+Add new product
+Edit product (price, availability, image)
+Update stock / Out of stock
+View categories & sub-categories (read-only?)
+
+Profile & Settings
+View store details
+Update availability (open/closed)
+View commission rate & earnings
+
+
+4. Admin Panel / Admin App
+
+Login Screen
+Email + Password
+
+Dashboard
+Orders count (today / total)
+Revenue summary
+Customer count
+Vendor count
+Recent orders list
+
+Side Menu / Main Sections
+Category & Sub-Category Management
+Add category
+Add sub-category
+Update / Edit category
+Activate / Deactivate
+
+Vendor Management
+Create vendor account
+View / Edit vendor details
+Activate / Suspend vendor
+View commission settings
+
+Customer & Delivery Partner Management
+View all customers
+View / Verify delivery partner documents
+Approve / Reject delivery partner
+Block / Activate customer
+
+Order Management
+View all orders
+Filter (status, date, category, vendor)
+View order details
+Manually update order status
+
+Support Ticket Management
+View tickets raised by customers
+Review ticket details
+Assign to admin / Take action
+Resolve / Close ticket
+
+
+
+This structure matches the branching and connections visible in your provided text-based flowchart.
+If you want me to zoom into one specific app (e.g. only Customer App → detailed screen-by-screen requirements), or convert any part into Laravel controller/service structure, or add missing pieces (like wallet, ratings, chat), just tell me which direction next. 😊
