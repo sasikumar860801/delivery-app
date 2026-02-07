@@ -602,7 +602,8 @@ class CustomerController extends Controller
         }
         
         try {
-            $query = $request->query;
+            $query = $request->get('query');
+
             $customerId = $request->user()->id;
             
             // Save search history
@@ -610,8 +611,8 @@ class CustomerController extends Controller
                 ['customer_id' => $customerId, 'search_term' => $query],
                 [
                     'search_count' => DB::raw('search_count + 1'),
-                    'last_searched_at' => now(),
-                    'updated_at' => now()
+                    'last_searched_at' => now()
+                   
                 ]
             );
             
@@ -675,7 +676,6 @@ class CustomerController extends Controller
                 ->select(
                     'products.*',
                     'vendors.business_name as vendor_name',
-                    'vendors.rating as vendor_rating',
                     'categories.name as category_name'
                 )
                 ->first();

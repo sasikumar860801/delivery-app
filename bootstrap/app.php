@@ -20,6 +20,8 @@ return Application::configure(basePath: dirname(__DIR__))
             
             'admin/*',
             'vendor/*',
+            'customer/*',
+             'delivery/*',
         ]);
 
         // Never redirect guests (API-only)

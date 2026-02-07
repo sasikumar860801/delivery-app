@@ -19,10 +19,18 @@ class AdminController extends Controller
     public function getCategories(Request $request)
     {
         try {
+            $baseUrl = rtrim(config('app.url'), '/');
+    
             $categories = DB::table('categories')
                 ->orderBy('display_order')
-                ->get();
-            
+                ->get()
+                ->map(function ($category) use ($baseUrl) {
+                    if (!empty($category->image)) {
+                        $category->image = $baseUrl . '/storage/' . ltrim($category->image, '/');
+                    }
+                    return $category;
+                });
+    
             return response()->json([
                 'success' => true,
                 'data' => $categories
@@ -97,65 +105,94 @@ class AdminController extends Controller
         }
     }
     
-    /**
+    /**dashb
      * Update category
      */
     public function updateCategory(Request $request, $id)
-    {
-        $validator = Validator::make($request->all(), [
-            'name' => 'string|max:255',
-            'description' => 'nullable|string',
-            'parent_id' => 'nullable|exists:categories,id',
-            'is_active' => 'boolean'
-        ]);
-        
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
-        
-        try {
-            $category = DB::table('categories')->find($id);
-            
-            if (!$category) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Category not found'
-                ], 404);
-            }
-            
-            $updateData = [];
-            if ($request->has('name')) {
-                $updateData['name'] = $request->name;
-                $updateData['slug'] = Str::slug($request->name) . '-' . time();
-            }
-            if ($request->has('description')) $updateData['description'] = $request->description;
-            if ($request->has('parent_id')) $updateData['parent_id'] = $request->parent_id;
-            if ($request->has('is_active')) $updateData['is_active'] = $request->is_active;
-            if ($request->has('display_order')) $updateData['display_order'] = $request->display_order;
-            
-            $updateData['updated_at'] = now();
-            
-            DB::table('categories')->where('id', $id)->update($updateData);
-            
-            $updatedCategory = DB::table('categories')->find($id);
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Category updated successfully',
-                'data' => $updatedCategory
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update category',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+{
+    $validator = Validator::make($request->all(), [
+        'name' => 'string|max:255',
+        'description' => 'nullable|string',
+        'parent_id' => 'nullable|exists:categories,id',
+        'is_active' => 'boolean',
+        'display_order' => 'nullable|integer',
+        'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'errors' => $validator->errors()
+        ], 422);
     }
-    
+
+    try {
+        $category = DB::table('categories')->find($id);
+
+        if (!$category) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Category not found'
+            ], 404);
+        }
+
+        $updateData = [];
+
+        if ($request->has('name')) {
+            $updateData['name'] = $request->name;
+            $updateData['slug'] = Str::slug($request->name) . '-' . time();
+        }
+
+        if ($request->has('description')) {
+            $updateData['description'] = $request->description;
+        }
+
+        if ($request->has('parent_id')) {
+            $updateData['parent_id'] = $request->parent_id;
+        }
+
+        if ($request->has('is_active')) {
+            $updateData['is_active'] = $request->is_active;
+        }
+
+        if ($request->has('display_order')) {
+            $updateData['display_order'] = $request->display_order;
+        }
+
+        // 🔹 Handle image upload
+        if ($request->hasFile('image')) {
+
+            // Delete old image if exists
+            if (!empty($category->image)) {
+                Storage::disk('public')->delete($category->image);
+            }
+
+            // Store new image
+            $updateData['image'] = $request->file('image')->store(
+                'categories',
+                'public'
+            );
+        }
+
+        $updateData['updated_at'] = now();
+
+        DB::table('categories')->where('id', $id)->update($updateData);
+
+        $updatedCategory = DB::table('categories')->find($id);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Category updated successfully',
+            'data' => $updatedCategory
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to update category',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
     /**
      * Delete category
      */

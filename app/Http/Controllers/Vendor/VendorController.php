@@ -163,13 +163,13 @@ class VendorController extends Controller
                         'message' => 'Your account is ' . $vendor->status
                     ], 403);
                 }
-                
+                $raw_token=Str::random(40);
                 // Create Sanctum token
                 $token = DB::table('personal_access_tokens')->insertGetId([
-                    'tokenable_type' => 'App\\Models\\Vendor',
+                    'tokenable_type' => 'App\Models\Vendor',
                     'tokenable_id' => $vendor->id,
                     'name' => 'vendor-api-token',
-                    'token' => hash('sha256', Str::random(40)),
+                    'token' => hash('sha256', $raw_token),
                     'abilities' => '["*"]',
                     'created_at' => now(),
                     'updated_at' => now()
@@ -187,7 +187,7 @@ class VendorController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => 'Login successful',
-                    'token' => $token, // This should be the plain token in real implementation
+                    'token' => $raw_token, // This should be the plain token in real implementation
                     'vendor' => [
                         'id' => $vendor->id,
                         'name' => $vendor->name,
@@ -253,7 +253,7 @@ class VendorController extends Controller
                 
                 // Create token
                 $token = DB::table('personal_access_tokens')->insertGetId([
-                    'tokenable_type' => 'App\\Models\\Vendor',
+                    'tokenable_type' => 'vendor',
                     'tokenable_id' => $vendorId,
                     'name' => 'vendor-api-token',
                     'token' => hash('sha256', Str::random(40)),
