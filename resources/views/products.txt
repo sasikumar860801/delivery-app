@@ -1,67 +1,45 @@
 🥦 Category: Fresh Produce
 🟢 Subcategory: Fruits
-
 Apples (Red Delicious)
-
 Bananas
-
 Oranges
 
 🟢 Subcategory: Vegetables
-
 Tomatoes
-
 Potatoes
 
 🟢 Subcategory: Herbs & Greens
-
 Spinach
-
 Coriander Leaves
 
 🥛 Category: Dairy & Eggs
 🟢 Subcategory: Milk
-
 Full Cream Milk
-
 Low Fat Milk
 
 🟢 Subcategory: Cheese
-
 Cheddar Cheese
-
 Mozzarella Cheese
 
 🟢 Subcategory: Yogurt
-
 Plain Yogurt
-
 Greek Yogurt
 
 🟢 Subcategory: Eggs
-
 Brown Eggs (12 Pack)
 
 🍞 Category: Bakery
 🟢 Subcategory: Bread
-
 White Bread Loaf
-
 Whole Wheat Bread
 
 🟢 Subcategory: Cakes
-
 Chocolate Cake
 
 🥩 Category: Meat & Seafood
 🟢 Subcategory: Chicken
-
 Chicken Breast
-
 Whole Chicken
 
 🟢 Subcategory: Fish
-
 Salmon Fillet
-
-

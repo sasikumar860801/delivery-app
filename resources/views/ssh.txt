@@ -1,0 +1,12 @@
+what to do 
+1. document ready 
+2. share postman to indhu 
+3.image downloads for all categories and products 
+4.feed into live via admin api
+5. test customer app api 
+6.admin panel web view login and integrate whole api one by one 
+
+
+Quickbee$123
+ssh -p 65002 u963328467@145.79.213.13
+[u963328467@in-mum-web1822 ~]$ cd domains/quickbee.co.in/public_html

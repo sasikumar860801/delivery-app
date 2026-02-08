@@ -19,7 +19,6 @@ class VendorController extends Controller
      */
     public function sendOtp(Request $request)
     {
-        
         $validator = Validator::make($request->all(), [
             'mobile' => 'required|string|max:20',
             'email' => 'nullable|email'
@@ -70,7 +69,6 @@ class VendorController extends Controller
                 ]);
             } else {
                 // New vendor - registration
-                // Just send OTP, account will be created after OTP verification
                 $tempVendorId = Str::random(20);
                 
                 // Store in temp session or temp table
@@ -163,7 +161,8 @@ class VendorController extends Controller
                         'message' => 'Your account is ' . $vendor->status
                     ], 403);
                 }
-                $raw_token=Str::random(40);
+                
+                $raw_token = Str::random(40);
                 // Create Sanctum token
                 $token = DB::table('personal_access_tokens')->insertGetId([
                     'tokenable_type' => 'App\Models\Vendor',
@@ -187,7 +186,7 @@ class VendorController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => 'Login successful',
-                    'token' => $raw_token, // This should be the plain token in real implementation
+                    'token' => $raw_token,
                     'vendor' => [
                         'id' => $vendor->id,
                         'name' => $vendor->name,
@@ -233,7 +232,7 @@ class VendorController extends Controller
                     'email' => $tempAuth->email,
                     'phone' => $mobile,
                     'business_name' => $tempData['business_name'] ?? 'Business',
-                    'status' => 'pending', // Admin needs to approve
+                    'status' => 'pending',
                     'created_at' => now(),
                     'updated_at' => now()
                 ]);
@@ -251,12 +250,13 @@ class VendorController extends Controller
                 // Clear temp data
                 DB::table('temp_vendor_auth')->where('id', $tempAuth->id)->delete();
                 
+                $raw_token = Str::random(40);
                 // Create token
                 $token = DB::table('personal_access_tokens')->insertGetId([
                     'tokenable_type' => 'vendor',
                     'tokenable_id' => $vendorId,
                     'name' => 'vendor-api-token',
-                    'token' => hash('sha256', Str::random(40)),
+                    'token' => hash('sha256', $raw_token),
                     'abilities' => '["*"]',
                     'created_at' => now(),
                     'updated_at' => now()
@@ -265,7 +265,7 @@ class VendorController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => 'Registration successful. Account pending approval.',
-                    'token' => $token,
+                    'token' => $raw_token,
                     'vendor' => [
                         'id' => $vendorId,
                         'name' => $tempData['name'] ?? 'Vendor',
@@ -363,16 +363,19 @@ class VendorController extends Controller
                 ->limit(5)
                 ->get();
             
-            // Low stock products
-            $lowStockProducts = DB::table('vendor_products')
+            // ✅ UPDATED: Low stock products (now from products table)
+            $lowStockProducts = DB::table('products')
                 ->where('vendor_id', $vendorId)
                 ->where('stock_quantity', '<', 10)
                 ->where('stock_quantity', '>', 0)
+                ->where('is_active', true)
                 ->count();
             
-            $outOfStockProducts = DB::table('vendor_products')
+            // ✅ UPDATED: Out of stock products (now from products table)
+            $outOfStockProducts = DB::table('products')
                 ->where('vendor_id', $vendorId)
                 ->where('stock_quantity', 0)
+                ->where('is_active', true)
                 ->count();
             
             return response()->json([
@@ -407,22 +410,23 @@ class VendorController extends Controller
         try {
             $vendorId = $request->user()->id;
             
-            $query = DB::table('vendor_products')
-                ->leftJoin('categories', 'vendor_products.category_id', '=', 'categories.id')
-                ->where('vendor_products.vendor_id', $vendorId)
+            // ✅ UPDATED: Query products table instead of vendor_products
+            $query = DB::table('products')
+                ->leftJoin('categories', 'products.category_id', '=', 'categories.id')
+                ->where('products.vendor_id', $vendorId) // Filter by vendor_id
                 ->select(
-                    'vendor_products.*',
+                    'products.*',
                     'categories.name as category_name'
                 );
             
             // Filter by category
             if ($request->has('category_id')) {
-                $query->where('vendor_products.category_id', $request->category_id);
+                $query->where('products.category_id', $request->category_id);
             }
             
             // Filter by status
             if ($request->has('is_active')) {
-                $query->where('vendor_products.is_active', $request->is_active);
+                $query->where('products.is_active', $request->is_active);
             }
             
             // Filter by stock
@@ -437,12 +441,12 @@ class VendorController extends Controller
             // Search
             if ($request->has('search')) {
                 $query->where(function($q) use ($request) {
-                    $q->where('vendor_products.name', 'like', "%{$request->search}%")
-                      ->orWhere('vendor_products.sku', 'like', "%{$request->search}%");
+                    $q->where('products.name', 'like', "%{$request->search}%")
+                      ->orWhere('products.sku', 'like', "%{$request->search}%");
                 });
             }
             
-            $products = $query->orderBy('vendor_products.created_at', 'desc')->get();
+            $products = $query->orderBy('products.created_at', 'desc')->get();
             
             return response()->json([
                 'success' => true,
@@ -470,46 +474,68 @@ class VendorController extends Controller
             'discounted_price' => 'nullable|numeric|min:0',
             'sku' => 'nullable|string|max:100',
             'stock_quantity' => 'required|integer|min:0',
-            'min_order' => 'nullable|integer|min:1',
-            'max_order' => 'nullable|integer|min:1',
+            'min_order_quantity' => 'nullable|integer|min:1',
+            'max_order_quantity' => 'nullable|integer|min:1',
             'images' => 'nullable|array',
+            'images.*' => 'image|mimes:jpg,jpeg,png,webp|max:2048',
             'is_active' => 'boolean'
         ]);
-        
+
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'errors' => $validator->errors()
             ], 422);
         }
-        
+
         try {
             $vendorId = $request->user()->id;
-            
-            $productId = DB::table('vendor_products')->insertGetId([
-                'vendor_id' => $vendorId,
+
+            // Handle image upload
+            $imagePaths = [];
+
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $image) {
+                    $path = $image->store('vendor_products', 'public');
+                    $imagePaths[] = $path;
+                }
+            }
+
+            // ✅ UPDATED: Insert into products table (main table that customers see)
+            $productId = DB::table('products')->insertGetId([
+                'vendor_id' => $vendorId, // This is the KEY field
                 'category_id' => $request->category_id,
                 'name' => $request->name,
+                'slug' => Str::slug($request->name) . '-' . time(),
                 'description' => $request->description,
                 'price' => $request->price,
                 'discounted_price' => $request->discounted_price,
                 'sku' => $request->sku,
                 'stock_quantity' => $request->stock_quantity,
-                'min_order' => $request->min_order ?? 1,
-                'max_order' => $request->max_order,
-                'images' => $request->images ? json_encode($request->images) : null,
+                'min_order_quantity' => $request->min_order_quantity ?? 1,
+                'max_order_quantity' => $request->max_order_quantity,
+                'images' => !empty($imagePaths) ? json_encode($imagePaths) : null,
                 'is_active' => $request->is_active ?? true,
                 'created_at' => now(),
                 'updated_at' => now()
             ]);
-            
-            $product = DB::table('vendor_products')->find($productId);
-            
+
+            $product = DB::table('products')->find($productId);
+
+            // Append full image URLs
+            if ($product && $product->images) {
+                $images = json_decode($product->images, true);
+                $product->image_urls = array_map(function ($img) {
+                    return asset('storage/' . $img);
+                }, $images);
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Product added successfully',
                 'data' => $product
             ]);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -532,8 +558,8 @@ class VendorController extends Controller
             'discounted_price' => 'nullable|numeric|min:0',
             'sku' => 'nullable|string|max:100',
             'stock_quantity' => 'integer|min:0',
-            'min_order' => 'nullable|integer|min:1',
-            'max_order' => 'nullable|integer|min:1',
+            'min_order_quantity' => 'nullable|integer|min:1',
+            'max_order_quantity' => 'nullable|integer|min:1',
             'images' => 'nullable|array',
             'is_active' => 'boolean'
         ]);
@@ -548,8 +574,8 @@ class VendorController extends Controller
         try {
             $vendorId = $request->user()->id;
             
-            // Check if product belongs to vendor
-            $product = DB::table('vendor_products')
+            // ✅ UPDATED: Check if product belongs to vendor in products table
+            $product = DB::table('products')
                 ->where('id', $id)
                 ->where('vendor_id', $vendorId)
                 ->first();
@@ -562,26 +588,30 @@ class VendorController extends Controller
             }
             
             $updateData = [];
-            if ($request->has('name')) $updateData['name'] = $request->name;
+            if ($request->has('name')) {
+                $updateData['name'] = $request->name;
+                $updateData['slug'] = Str::slug($request->name) . '-' . time();
+            }
             if ($request->has('category_id')) $updateData['category_id'] = $request->category_id;
             if ($request->has('description')) $updateData['description'] = $request->description;
             if ($request->has('price')) $updateData['price'] = $request->price;
             if ($request->has('discounted_price')) $updateData['discounted_price'] = $request->discounted_price;
             if ($request->has('sku')) $updateData['sku'] = $request->sku;
             if ($request->has('stock_quantity')) $updateData['stock_quantity'] = $request->stock_quantity;
-            if ($request->has('min_order')) $updateData['min_order'] = $request->min_order;
-            if ($request->has('max_order')) $updateData['max_order'] = $request->max_order;
+            if ($request->has('min_order_quantity')) $updateData['min_order_quantity'] = $request->min_order_quantity;
+            if ($request->has('max_order_quantity')) $updateData['max_order_quantity'] = $request->max_order_quantity;
             if ($request->has('images')) $updateData['images'] = json_encode($request->images);
             if ($request->has('is_active')) $updateData['is_active'] = $request->is_active;
             
             $updateData['updated_at'] = now();
             
-            DB::table('vendor_products')
+            // ✅ UPDATED: Update in products table
+            DB::table('products')
                 ->where('id', $id)
                 ->where('vendor_id', $vendorId)
                 ->update($updateData);
             
-            $updatedProduct = DB::table('vendor_products')->find($id);
+            $updatedProduct = DB::table('products')->find($id);
             
             return response()->json([
                 'success' => true,
@@ -616,8 +646,8 @@ class VendorController extends Controller
         try {
             $vendorId = $request->user()->id;
             
-            // Check if product belongs to vendor
-            $product = DB::table('vendor_products')
+            // ✅ UPDATED: Check if product belongs to vendor in products table
+            $product = DB::table('products')
                 ->where('id', $id)
                 ->where('vendor_id', $vendorId)
                 ->first();
@@ -629,7 +659,8 @@ class VendorController extends Controller
                 ], 404);
             }
             
-            DB::table('vendor_products')
+            // ✅ UPDATED: Update stock in products table
+            DB::table('products')
                 ->where('id', $id)
                 ->where('vendor_id', $vendorId)
                 ->update([
@@ -658,8 +689,8 @@ class VendorController extends Controller
         try {
             $vendorId = $request->user()->id;
             
-            // Check if product belongs to vendor
-            $product = DB::table('vendor_products')
+            // ✅ UPDATED: Check if product belongs to vendor in products table
+            $product = DB::table('products')
                 ->where('id', $id)
                 ->where('vendor_id', $vendorId)
                 ->first();
@@ -685,7 +716,8 @@ class VendorController extends Controller
                 ], 400);
             }
             
-            DB::table('vendor_products')
+            // ✅ UPDATED: Delete from products table
+            DB::table('products')
                 ->where('id', $id)
                 ->where('vendor_id', $vendorId)
                 ->delete();
@@ -702,8 +734,8 @@ class VendorController extends Controller
             ], 500);
         }
     }
-    
-    // ==================== ORDER MANAGEMENT ====================
+
+        // ==================== ORDER MANAGEMENT ====================
     
     /**
      * Get vendor orders
@@ -795,15 +827,15 @@ class VendorController extends Controller
                 )
                 ->first();
             
-            // Get order items for this vendor
+            // ✅ UPDATED: Get order items from products table (not vendor_products)
             $orderItems = DB::table('order_items')
-                ->join('vendor_products', 'order_items.product_id', '=', 'vendor_products.id')
+                ->join('products', 'order_items.product_id', '=', 'products.id')
                 ->where('order_items.order_id', $vendorOrder->order_id)
-                ->where('vendor_products.vendor_id', $vendorId)
+                ->where('products.vendor_id', $vendorId) // Filter by vendor_id
                 ->select(
                     'order_items.*',
-                    'vendor_products.name as product_name',
-                    'vendor_products.images'
+                    'products.name as product_name',
+                    'products.images'
                 )
                 ->get();
             

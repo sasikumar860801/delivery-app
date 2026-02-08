@@ -13,20 +13,25 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
 
-    ->withMiddleware(function (Middleware $middleware) {
+->withMiddleware(function (Middleware $middleware) {
+    // Disable CSRF for admin APIs
+    $middleware->validateCsrfTokens(except: [
+        'admin/*',
+        'vendor/*',
+        'customer/*',
+        'delivery/*',
+    ]);
 
-        // Disable CSRF for admin APIs
-        $middleware->validateCsrfTokens(except: [
-            
-            'admin/*',
-            'vendor/*',
-            'customer/*',
-             'delivery/*',
-        ]);
-
-        // Never redirect guests (API-only)
-        $middleware->redirectGuestsTo(fn () => null);
-    })
+    // Remove or modify the redirectGuestsTo line
+    // $middleware->redirectGuestsTo(fn () => null);
+    
+    // Alternative: Only redirect API guests differently
+    $middleware->redirectGuestsTo(fn (Request $request) => 
+        $request->expectsJson() 
+            ? null  // For API requests, return null/JSON
+            : route('login') // For web requests, redirect to login (if you have one)
+    );
+})
 
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->render(function (
